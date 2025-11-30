@@ -4,84 +4,62 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from io import BytesIO
 
-
-# -----------------------------
-# 한글 폰트 자동 설정
-# -----------------------------
-def set_korean_font():
-    files = fm.findSystemFonts()
-    for f in files:
-        if "NotoSansCJK" in f:
-            plt.rcParams['font.family'] = fm.FontProperties(fname=f).get_name()
-            return
-    plt.rcParams["font.family"] = "DejaVu Sans"
-
-set_korean_font()
+# ============================================================
+# 1) 한글 폰트 설정 (Cloud에서도 깨짐 없음)
+# ============================================================
+plt.rcParams['font.family'] = ['NanumGothic', 'NanumMyeongjo', 'UnDotum', 'DejaVu Sans']
 
 
-# -----------------------------
-# CSV 불러오기
-# -----------------------------
+# ============================================================
+# 2) CSV 불러오기 (파일명: data.csv)
+# ============================================================
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data.csv")   # CSV 파일 그대로 사용
+    df = pd.read_csv("data.csv")
     return df
 
 df = load_data()
 
-# CSV 컬럼명 기준
 NAME_COL = "name"
-KM_COL   = "이정(km)"
+KM_COL = "이정(km)"
 TYPE_COL = "종별구분"
 
 
-# -----------------------------
-# Streamlit UI
-# -----------------------------
-st.title("교량 선택 기반 거리비례 노선도 (양방향 + IC 자동 표시)")
+# ============================================================
+# 3) UI – 교량 선택
+# ============================================================
+st.title("고속도로 거리비례 노선도 생성기 (양방향 + IC 자동표시)")
 
-st.write("좌측 사이드바에서 **영암 방향 / 순천 방향** 교량을 선택하세요.")
+all_bridges = df[NAME_COL].dropna().unique().tolist()
 
-all_bridge_names = df[NAME_COL].dropna().unique().tolist()
-
-# ==========================
-# 방향 선택 UI
-# ==========================
 st.sidebar.header("교량 선택")
 
-select_yeongam = st.sidebar.multiselect(
-    "영암 방향 교량",
-    all_bridge_names
-)
-
-select_suncheon = st.sidebar.multiselect(
-    "순천 방향 교량",
-    all_bridge_names
-)
+select_yeongam = st.sidebar.multiselect("영암 방향 교량 선택", all_bridges)
+select_suncheon = st.sidebar.multiselect("순천 방향 교량 선택", all_bridges)
 
 
-# ==========================
-# 보성IC 자동 감지
-# ==========================
+# ============================================================
+# 4) 보성IC 자동 감지
+# ============================================================
 ic_rows = df[df[TYPE_COL].str.contains("IC", case=False, na=False)]
-
 bosung_ic_km = None
+
 if not ic_rows.empty:
     bosung_ic_km = float(ic_rows.iloc[0][KM_COL])
 
 
-# -----------------------------
-# 노선도 그리는 함수
-# -----------------------------
+# ============================================================
+# 5) 노선도 생성 함수
+# ============================================================
 def draw_route(yeongam_df, suncheon_df, ic_km=None):
     fig, ax = plt.subplots(figsize=(18, 6))
 
     MIN_KM = 0
     MAX_KM = 106.8
 
-    # ===== 영암 방향 =====
+    # -------------------- 영암 방향 --------------------
     y_up = 1
-    ax.hlines(y_up, MIN_KM, MAX_KM, colors='black', linewidth=2)
+    ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_up + 0.15, "영암 방향 (106.8k → 0k)", fontsize=12)
 
     for _, row in yeongam_df.iterrows():
@@ -90,9 +68,9 @@ def draw_route(yeongam_df, suncheon_df, ic_km=None):
         ax.scatter(km, y_up, marker="v", s=160, color="black")
         ax.text(km, y_up - 0.13, f"{name}\n({km}k)", ha="center", va="top")
 
-    # ===== 순천 방향 =====
+    # -------------------- 순천 방향 --------------------
     y_down = 0
-    ax.hlines(y_down, MIN_KM, MAX_KM, colors='black', linewidth=2)
+    ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_down + 0.13, "순천 방향 (0k → 106.8k)", fontsize=12)
 
     for _, row in suncheon_df.iterrows():
@@ -101,28 +79,29 @@ def draw_route(yeongam_df, suncheon_df, ic_km=None):
         ax.scatter(km, y_down, marker="^", s=160, color="black")
         ax.text(km, y_down - 0.17, f"{name}\n({km}k)", ha="center", va="top")
 
-    # ===== 보성IC 양방향 =====
+    # -------------------- 보성IC 양방향 --------------------
     if ic_km is not None:
-        # 위(IC)
+        # 위(영암)
         ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
         ax.text(ic_km, y_up + 0.30, f"보성IC ({ic_km}k)", ha="center")
 
-        # 아래(IC)
+        # 아래(순천)
         ax.vlines(ic_km, y_down - 0.25, y_down, colors="black")
         ax.text(ic_km, y_down - 0.30, f"보성IC ({ic_km}k)", ha="center", va="top")
 
     ax.set_xlim(MIN_KM, MAX_KM)
     ax.set_ylim(-1, 2)
     ax.axis("off")
-
     plt.tight_layout()
+
     return fig
 
 
-# ==========================
-# 생성 버튼
-# ==========================
-if st.button("노선도 생성 / PDF 만들기"):
+# ============================================================
+# 6) 생성 버튼
+# ============================================================
+if st.button("노선도 생성 및 PDF 다운로드"):
+
     df_up = df[df[NAME_COL].isin(select_yeongam)].sort_values(KM_COL)
     df_down = df[df[NAME_COL].isin(select_suncheon)].sort_values(KM_COL)
 
@@ -131,9 +110,10 @@ if st.button("노선도 생성 / PDF 만들기"):
     else:
         fig = draw_route(df_up, df_down, bosung_ic_km)
 
-        st.subheader("미리보기")
+        st.subheader("노선도 미리보기")
         st.pyplot(fig)
 
+        # PDF 생성
         pdf_buffer = BytesIO()
         fig.savefig(pdf_buffer, format="pdf", bbox_inches="tight")
         pdf_buffer.seek(0)
@@ -144,4 +124,5 @@ if st.button("노선도 생성 / PDF 만들기"):
             file_name="노선도.pdf",
             mime="application/pdf"
         )
+
 
