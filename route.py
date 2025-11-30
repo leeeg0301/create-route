@@ -127,11 +127,11 @@ def draw_route(up_df, down_df, ic_km=None):
             if toggle % 2 == 1:
                 y_current = y_up - 0.18
             else:
-                y_current = y_up + 0.3
+                y_current = y_up + 0.40
 
             # xoffset = 그룹 인덱스 × 0.8
             offset_scale = (toggle + 1) // 2  # 1,1,2,2,3,3...
-            x_offset = sign * (1.0 * offset_scale)
+            x_offset = sign * (0.8 * offset_scale)
 
             # 다음
             toggle += 1
@@ -192,10 +192,10 @@ def draw_route(up_df, down_df, ic_km=None):
             if toggle % 2 == 1:
                 y_current = y_down - 0.18
             else:
-                y_current = y_down + 0.3
+                y_current = y_down + 0.40
 
             offset_scale = (toggle + 1) // 2
-            x_offset = sign * (1.0 * offset_scale)
+            x_offset = sign * (0.8 * offset_scale)
 
             toggle += 1
             sign *= -1
@@ -246,7 +246,6 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.axis("off")
     fig.tight_layout()
     return fig
-
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -300,6 +299,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
