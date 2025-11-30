@@ -9,13 +9,13 @@ from io import BytesIO
 # ======================================================
 # 1. 한글 폰트 설정 (fonts/NanumGothic.ttf 있으면 사용)
 # ======================================================
-font_path = "fonts/NanumGothic.ttf"
+font_path = "fonts/NanumGothic-Regular.ttf"
 if os.path.exists(font_path):
     fm.fontManager.addfont(font_path)
     plt.rcParams["font.family"] = "NanumGothic"
-else:
+#else:
     # 폰트 없으면 시스템 기본폰트 사용
-    plt.rcParams["font.family"] = "DejaVu Sans"
+    #plt.rcParams["font.family"] = "DejaVu Sans"
 
 # ======================================================
 # 2. 데이터 불러오기 (data.csv)
@@ -229,3 +229,4 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
