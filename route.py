@@ -116,7 +116,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         # 가까운 km일 경우 x_offset
         if prev_km_up is not None and abs(prev_km_up - km) < 0.25:
-            x_offset = 1.0
+            x_offset = -1.0
         else:
             x_offset = 0
 
@@ -238,4 +238,5 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
