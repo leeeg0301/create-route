@@ -117,7 +117,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         # ★ 겹치면 위로 올림
         if prev_km_up is not None and abs(prev_km_up - km) < 0.25:
-            y_current = y_up + 0.20
+            y_current = y_up + 0.30
             x_offset = -0.8  # 왼쪽으로 밀어 번호 순서 가독성 ↑
         else:
             y_current = y_up
@@ -153,7 +153,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         # ★ 겹치면 아래로 내림 + 오른쪽 밀기
         if prev_km_down is not None and abs(prev_km_down - km) < 0.25:
-            y_current = y_down - 0.20
+            y_current = y_down + 0.30
             x_offset = 0.8
         else:
             y_current = y_down
@@ -241,6 +241,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
