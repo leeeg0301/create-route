@@ -124,5 +124,3 @@ if st.button("노선도 생성 및 PDF 다운로드"):
             file_name="노선도.pdf",
             mime="application/pdf"
         )
-
-
