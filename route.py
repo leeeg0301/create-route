@@ -106,7 +106,7 @@ def draw_route(up_df, down_df, ic_km=None):
     # ---------------- 영암 방향 (위) ----------------
     y_up = 1.0
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
-    ax.text(MIN_KM, y_up + 1.0, "영암 방향 (106.8k → 0k)", fontsize=14)
+    ax.text(MIN_KM, y_up + 0.6, "영암 방향 (106.8k → 0k)", fontsize=14)
 
     prev_km_up = None
 
@@ -142,7 +142,7 @@ def draw_route(up_df, down_df, ic_km=None):
     # ---------------- 순천 방향 (아래) ----------------
     y_down = 0.0
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
-    ax.text(MIN_KM, y_down + 1.0, "순천 방향 (0k → 106.8k)", fontsize=14)
+    ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
 
     prev_km_down = None
 
@@ -241,6 +241,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
