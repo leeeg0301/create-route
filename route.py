@@ -1,6 +1,4 @@
-Python 3.9.13 (tags/v3.9.13:6de2ca5, May 17 2022, 16:36:42) [MSC v.1929 64 bit (AMD64)] on win32
-Type "help", "copyright", "credits" or "license()" for more information.
->>> import streamlit as st
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
@@ -123,4 +121,5 @@ if st.button("노선도 생성 및 PDF 내보내기"):
             data=buf,
             file_name="노선도.pdf",
             mime="application/pdf"
+
         )
