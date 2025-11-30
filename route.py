@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from io import BytesIO
 
-# ============================================================
-# 1) 한글 폰트 설정 (Cloud에서 깨짐 방지)
-# ============================================================
-# ---- Custom Font Load ----
-font_path = "fonts/NotoSansCJKkr-Regular.otf"  # 프로젝트에 포함된 폰트 경로
-fontprop = fm.FontProperties(fname=font_path)
-plt.rcParams["font.family"] = fontprop.get_name()
+# --------------------------
+#  한글 폰트 강제 등록 (100% 깨짐 방지)
+# --------------------------
+font_path = "fonts/NanumGothic.ttf"
+
+# matplotlib에 수동 등록
+fm.fontManager.addfont(font_path)
+plt.rcParams["font.family"] = "NanumGothic"
 
 # ============================================================
 # 2) CSV 불러오기 (data.csv)
@@ -157,6 +158,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도.pdf",
         mime="application/pdf"
     )
+
 
 
 
