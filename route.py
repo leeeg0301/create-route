@@ -115,10 +115,12 @@ def draw_route(up_df, down_df, ic_km=None):
         name = row["표시이름"]
         num = row["표시번호"]
 
-        # 가까운 km일 경우 x_offset
+        # ★ 겹치면 위로 올림
         if prev_km_up is not None and abs(prev_km_up - km) < 0.25:
-            x_offset = -1.0
+            y_current = y_up + 0.20
+            x_offset = -0.8  # 왼쪽으로 밀어 번호 순서 가독성 ↑
         else:
+            y_current = y_up
             x_offset = 0
 
         prev_km_up = km
@@ -129,7 +131,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         ax.text(
             km + x_offset,
-            y_up - 0.18,
+            y_current - 0.12,
             text,
             rotation=90,
             ha="center",
@@ -149,9 +151,12 @@ def draw_route(up_df, down_df, ic_km=None):
         name = row["표시이름"]
         num = row["표시번호"]
 
+        # ★ 겹치면 아래로 내림 + 오른쪽 밀기
         if prev_km_down is not None and abs(prev_km_down - km) < 0.25:
-            x_offset = 1.0
+            y_current = y_down - 0.20
+            x_offset = 0.8
         else:
+            y_current = y_down
             x_offset = 0
 
         prev_km_down = km
@@ -162,7 +167,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         ax.text(
             km + x_offset,
-            y_down - 0.20,
+            y_current - 0.20,
             text,
             rotation=90,
             ha="center",
@@ -182,10 +187,7 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.set_ylim(-1.0, 2.0)
     ax.axis("off")
     fig.tight_layout()
-
     return fig
-
-
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -239,5 +241,6 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
