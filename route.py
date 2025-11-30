@@ -114,6 +114,14 @@ def draw_route(up_df, down_df, ic_km=None):
         name = row["표시이름"]
         num_label = row["표시번호"]
 
+# ---------------- 겹침 방지 x-offset ----------------
+        if prev_km_up is not None and abs(prev_km_up - km) < 0.25:
+            x_offset = 0.3
+        else:
+            x_offset = 0
+        prev_km_up = km
+# -----------------------------------------------------
+
         ax.scatter(km, y_up, marker="v", s=220, color="black")
         # 90도 회전 텍스트 (번호 / 이름 / km)
         text = f"{num_label}\n{name}\n({km}k)"
@@ -136,6 +144,14 @@ def draw_route(up_df, down_df, ic_km=None):
         km = row[KM_COL]
         name = row["표시이름"]
         num_label = row["표시번호"]
+
+    # ---------------- 겹침 방지 x-offset ----------------
+        if prev_km_down is not None and abs(prev_km_down - km) < 0.25:
+            x_offset = 0.3
+        else:
+            x_offset = 0
+        prev_km_down = km
+  # -----------------------------------------------------
 
         ax.scatter(km, y_down, marker="^", s=220, color="black")
         text = f"{num_label}\n{name}\n({km}k)"
@@ -229,4 +245,5 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
