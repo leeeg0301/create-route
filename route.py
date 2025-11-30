@@ -106,72 +106,68 @@ def draw_route(up_df, down_df, ic_km=None):
     # ---------------- 영암 방향 (위) ----------------
     y_up = 1.0
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
-    ax.text(MIN_KM, y_up + 0.6, "영암 방향 (106.8k → 0k)", fontsize=14)
+    ax.text(MIN_KM, y_up + 0.15, "영암 방향 (106.8k → 0k)", fontsize=14)
 
-    prev_km_up = None
+    toggle_up = 0  # 0 = 아래, 1 = 위
 
     for _, row in up_df.iterrows():
         km = row[KM_COL]
         name = row["표시이름"]
         num = row["표시번호"]
 
-        # ★ 겹치면 위로 올림
-        if prev_km_up is not None and abs(prev_km_up - km) < 0.25:
-            y_current = y_up + 0.50
-            x_offset = -0.8  # 왼쪽으로 밀어 번호 순서 가독성 ↑
+        # ★ 지그재그 배치 (아래 → 위 → 아래 → 위)
+        if toggle_up == 0:
+            y_current = y_up - 0.18   # 아래
+            toggle_up = 1
         else:
-            y_current = y_up
-            x_offset = 0
-
-        prev_km_up = km
+            y_current = y_up + 0.40   # 위
+            toggle_up = 0
 
         ax.scatter(km, y_up, marker="v", s=220, color="black")
 
         text = f"{num}\n{name}\n({km}k)"
 
         ax.text(
-            km + x_offset,
-            y_current - 0.12,
+            km,
+            y_current,
             text,
             rotation=90,
             ha="center",
-            va="top",
+            va="center",
             fontsize=11
         )
 
     # ---------------- 순천 방향 (아래) ----------------
     y_down = 0.0
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
-    ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
+    ax.text(MIN_KM, y_down + 0.15, "순천 방향 (0k → 106.8k)", fontsize=14)
 
-    prev_km_down = None
+    toggle_down = 0  # 0 = 위, 1 = 아래
 
     for _, row in down_df.iterrows():
         km = row[KM_COL]
         name = row["표시이름"]
         num = row["표시번호"]
 
-        # ★ 겹치면 아래로 내림 + 오른쪽 밀기
-        if prev_km_down is not None and abs(prev_km_down - km) < 0.25:
-            y_current = y_down + 0.50
-            x_offset = 0.8
+        # ★ 지그재그 배치 (위 → 아래 → 위 → 아래)
+        if toggle_down == 0:
+            y_current = y_down + 0.40   # 위
+            toggle_down = 1
         else:
-            y_current = y_down
-            x_offset = 0
-
-        prev_km_down = km
+            y_current = y_down - 0.18   # 아래
+            toggle_down = 0
 
         ax.scatter(km, y_down, marker="^", s=220, color="black")
 
         text = f"{num}\n{name}\n({km}k)"
 
         ax.text(
-            km + x_offset,
-            y_current - 0.20,
+            km,
+            y_current,
             text,
             rotation=90,
             ha="center",
-            va="top",
+            va="center",
             fontsize=11
         )
 
@@ -188,6 +184,7 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.axis("off")
     fig.tight_layout()
     return fig
+
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -241,6 +238,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
