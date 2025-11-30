@@ -7,7 +7,7 @@ from io import BytesIO
 # --------------------------
 #  한글 폰트 강제 등록 (100% 깨짐 방지)
 # --------------------------
-font_path = "fonts/NanumGothic.ttf"
+font_path = "fonts/NanumGothic-Regular.ttf"
 
 # matplotlib에 수동 등록
 fm.fontManager.addfont(font_path)
@@ -158,6 +158,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도.pdf",
         mime="application/pdf"
     )
+
 
 
 
