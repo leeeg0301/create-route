@@ -7,8 +7,10 @@ from io import BytesIO
 # ============================================================
 # 1) 한글 폰트 설정 (Cloud에서 깨짐 방지)
 # ============================================================
-plt.rcParams['font.family'] = ['NanumGothic', 'NanumMyeongjo', 'UnDotum', 'DejaVu Sans']
-
+# ---- Custom Font Load ----
+font_path = "fonts/NotoSansCJK-Regular.otf"  # 프로젝트에 포함된 폰트 경로
+fontprop = fm.FontProperties(fname=font_path)
+plt.rcParams["font.family"] = fontprop.get_name()
 
 # ============================================================
 # 2) CSV 불러오기 (data.csv)
@@ -155,3 +157,4 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도.pdf",
         mime="application/pdf"
     )
+
