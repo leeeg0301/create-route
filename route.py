@@ -24,7 +24,7 @@ set_korean_font()
 # -----------------------------
 @st.cache_data
 def load_bridge_data():
-    df = pd.read_csv("bridges.csv")
+    df = pd.read_csv("data.csv")
     return df
 
 df = load_bridge_data()
@@ -123,3 +123,4 @@ if st.button("노선도 생성 및 PDF 내보내기"):
             mime="application/pdf"
 
         )
+
