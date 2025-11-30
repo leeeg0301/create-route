@@ -103,75 +103,107 @@ def draw_route(up_df, down_df, ic_km=None):
     MIN_KM = 0
     MAX_KM = 106.8
 
-    # ---------------- 영암 방향 (위) ----------------
+    # ====================================================
+    # ✦ 공통 로직: km 차이를 기준으로 그룹 묶기
+    # ====================================================
+    def make_groups(df, ascending=True):
+        df_sorted = df.sort_values(KM_COL, ascending=ascending).reset_index(drop=True)
+        groups = []
+        cur_group = [df_sorted.iloc[0]]
+
+        for i in range(1, len(df_sorted)):
+            prev = df_sorted.iloc[i - 1][KM_COL]
+            now = df_sorted.iloc[i][KM_COL]
+
+            # km 차이 0.25 미만이면 같은 그룹
+            if abs(now - prev) < 0.25:
+                cur_group.append(df_sorted.iloc[i])
+            else:
+                groups.append(cur_group)
+                cur_group = [df_sorted.iloc[i]]
+
+        groups.append(cur_group)
+        return groups
+
+    # ====================================================
+    # 영암 방향 그룹 (KM: 큰→작게)
+    # ====================================================
+    up_groups = make_groups(up_df, ascending=False)
+
     y_up = 1.0
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_up + 0.15, "영암 방향 (106.8k → 0k)", fontsize=14)
 
-    toggle_up = 0  # 0 = 아래, 1 = 위
+    # 그룹별 배치
+    for group in up_groups:
+        toggle = 0  # 아래→위→아래 반복
 
-    for _, row in up_df.iterrows():
-        km = row[KM_COL]
-        name = row["표시이름"]
-        num = row["표시번호"]
+        for row in group:
+            km = row[KM_COL]
+            name = row["표시이름"]
+            num = row["표시번호"]
 
-        # ★ 지그재그 배치 (아래 → 위 → 아래 → 위)
-        if toggle_up == 0:
-            y_current = y_up - 0.18   # 아래
-            toggle_up = 1
-        else:
-            y_current = y_up + 0.40   # 위
-            toggle_up = 0
+            if toggle == 0:
+                y_current = y_up - 0.18
+                toggle = 1
+            else:
+                y_current = y_up + 0.40
+                toggle = 0
 
-        ax.scatter(km, y_up, marker="v", s=220, color="black")
+            ax.scatter(km, y_up, marker="v", s=220, color="black")
 
-        text = f"{num}\n{name}\n({km}k)"
+            text = f"{num}\n{name}\n({km}k)"
+            ax.text(
+                km,
+                y_current,
+                text,
+                rotation=90,
+                ha="center",
+                va="center",
+                fontsize=11
+            )
 
-        ax.text(
-            km,
-            y_current,
-            text,
-            rotation=90,
-            ha="center",
-            va="center",
-            fontsize=11
-        )
+    # ====================================================
+    # 순천 방향 그룹 (KM: 작은→큰)
+    # ====================================================
+    down_groups = make_groups(down_df, ascending=True)
 
-    # ---------------- 순천 방향 (아래) ----------------
     y_down = 0.0
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_down + 0.15, "순천 방향 (0k → 106.8k)", fontsize=14)
 
-    toggle_down = 0  # 0 = 위, 1 = 아래
+    # 그룹별 배치
+    for group in down_groups:
+        toggle = 0  # 위→아래→위 반복
 
-    for _, row in down_df.iterrows():
-        km = row[KM_COL]
-        name = row["표시이름"]
-        num = row["표시번호"]
+        for row in group:
+            km = row[KM_COL]
+            name = row["표시이름"]
+            num = row["표시번호"]
 
-        # ★ 지그재그 배치 (위 → 아래 → 위 → 아래)
-        if toggle_down == 0:
-            y_current = y_down + 0.40   # 위
-            toggle_down = 1
-        else:
-            y_current = y_down - 0.18   # 아래
-            toggle_down = 0
+            if toggle == 0:
+                y_current = y_down + 0.40
+                toggle = 1
+            else:
+                y_current = y_down - 0.18
+                toggle = 0
 
-        ax.scatter(km, y_down, marker="^", s=220, color="black")
+            ax.scatter(km, y_down, marker="^", s=220, color="black")
 
-        text = f"{num}\n{name}\n({km}k)"
+            text = f"{num}\n{name}\n({km}k)"
+            ax.text(
+                km,
+                y_current,
+                text,
+                rotation=90,
+                ha="center",
+                va="center",
+                fontsize=11
+            )
 
-        ax.text(
-            km,
-            y_current,
-            text,
-            rotation=90,
-            ha="center",
-            va="center",
-            fontsize=11
-        )
-
-    # ---------------- IC 표시 ----------------
+    # ====================================================
+    # 보성IC 표시
+    # ====================================================
     if ic_km is not None:
         ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
         ax.text(ic_km, y_up + 0.32, f"보성IC ({ic_km}k)", ha="center", fontsize=12)
@@ -184,7 +216,6 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.axis("off")
     fig.tight_layout()
     return fig
-
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -238,6 +269,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
