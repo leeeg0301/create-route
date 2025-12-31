@@ -142,7 +142,7 @@ def draw_route(up_df, down_df, ic_km=None):
             ax.text(
                 km + x_offset,
                 y_current,
-                f"{num}\n{name}\n({km}k)",
+                f"{num}",
                 rotation=90,
                 ha="center",
                 va="center",
@@ -202,7 +202,7 @@ def draw_route(up_df, down_df, ic_km=None):
             ax.text(
                 km + x_offset,
                 y_current,
-                f"{num}\n{name}\n({km}k)",
+                f"{num}",
                 rotation=90,
                 ha="center",
                 va="center",
@@ -295,6 +295,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
