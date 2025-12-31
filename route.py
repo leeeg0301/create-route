@@ -124,7 +124,7 @@ def draw_route(up_df, down_df, ic_km=None):
             if toggle % 2 == 1:
                 y_current = y_up - 0.18   # 아래
             else:
-                y_current = y_up + 0.40   # 위
+                y_current = y_up + 0.30   # 위
 
             # x 오프셋
             offset_scale = (toggle + 1) // 2
@@ -181,7 +181,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
             # y 지그재그
             if toggle % 2 == 1:
-                y_current = y_down + 0.40   # 위
+                y_current = y_down + 0.30   # 위
             else:
                 y_current = y_down - 0.18   # 아래
 
@@ -286,6 +286,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
