@@ -113,34 +113,34 @@ def draw_route(up_df, down_df, ic_km=None):
     group = []
 
     def flush_group_down(group):
-    toggle = 1
-    sign = +1
+        toggle = 1
+        sign = +1
 
-    for _, row in group:
-        km = row[KM_COL]
-        label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
+        for _, row in group:
+            km = row[KM_COL]
+            label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
 
-        if toggle % 2 == 1:
-            y_current = y_down + 0.40
-        else:
-            y_current = y_down - 0.18
+            if toggle % 2 == 1:
+                y_current = y_down + 0.40
+            else:
+                y_current = y_down - 0.18
 
-        offset_scale = (toggle + 1) // 2
-        x_offset = sign * (0.8 * offset_scale)
+            offset_scale = (toggle + 1) // 2
+            x_offset = sign * (0.8 * offset_scale)
 
-        toggle += 1
-        sign *= -1
+            toggle += 1
+            sign *= -1
 
-        ax.scatter(km, y_down, marker="^", s=220, color="black")
+            ax.scatter(km, y_down, marker="^", s=220, color="black")
 
-        ax.text(
-            km + x_offset,
-            y_current,
-            label,          # ✅ 번호만 출력
-            rotation=90,
-            ha="center",
-            va="center",
-            fontsize=11
+            ax.text(
+                km + x_offset,
+                y_current,
+                label,          # ✅ 번호만 출력
+                rotation=90,
+                ha="center",
+                va="center",
+                fontsize=11
         )
 
     # 그룹핑
@@ -170,34 +170,34 @@ def draw_route(up_df, down_df, ic_km=None):
     group = []
 
     def flush_group_down(group):
-    toggle = 1
-    sign = +1
+        toggle = 1
+        sign = +1
 
-    for _, row in group:
-        km = row[KM_COL]
-        label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
+        for _, row in group:
+            km = row[KM_COL]
+            label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
 
-        if toggle % 2 == 1:
-            y_current = y_down + 0.40
-        else:
-            y_current = y_down - 0.18
+            if toggle % 2 == 1:
+                y_current = y_down + 0.40
+            else:
+                y_current = y_down - 0.18
 
-        offset_scale = (toggle + 1) // 2
-        x_offset = sign * (0.8 * offset_scale)
+            offset_scale = (toggle + 1) // 2
+            x_offset = sign * (0.8 * offset_scale)
 
-        toggle += 1
-        sign *= -1
+            toggle += 1
+            sign *= -1
 
-        ax.scatter(km, y_down, marker="^", s=220, color="black")
+            ax.scatter(km, y_down, marker="^", s=220, color="black")
 
-        ax.text(
-            km + x_offset,
-            y_current,
-            label,          # ✅ 번호만 출력
-            rotation=90,
-            ha="center",
-            va="center",
-            fontsize=11
+            ax.text(
+                km + x_offset,
+                y_current,
+                label,          # ✅ 번호만 출력
+                rotation=90,
+                ha="center",
+                va="center",
+                fontsize=11
         )
 
     # 그룹핑
@@ -286,6 +286,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
