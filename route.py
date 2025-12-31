@@ -104,6 +104,7 @@ def draw_route(up_df, down_df, ic_km=None):
     GROUP_THRESHOLD_KM = 0.03   # ✅ 0.01k 수준이면 0.03~0.05 추천 (원하면 0.31로 크게도 가능)
     EDGE_MARGIN_KM = 1.5        # 끝단(0k/106.8k)에서 바깥으로 나가는 걸 막기
     X_STEP = 0.55               # 라벨을 좌/우로 퍼뜨리는 정도(km 단위)
+    X_OFFSETS = [-0.8, 0.8, -1.6, 1.6, -2.4, 2.4]
     UP_Y_LEVELS   = [1.0 - 0.10, 1.0 + 0.12, 1.0 - 0.20, 1.0 + 0.04, 1.0 - 0.28, 1.0 + 0.20]
     DOWN_Y_LEVELS = [0.0 + 0.12, 0.0 - 0.10, 0.0 + 0.20, 0.0 - 0.18, 0.0 + 0.28, 0.0 - 0.26]
     # -----------------------------------------------
@@ -141,10 +142,7 @@ def draw_route(up_df, down_df, ic_km=None):
         km_anchor = sum(kms) / len(kms)
 
         # 라벨 배치(그룹 단위로 좌/우 번갈아)
-        toggle = group_idx + 1
-        sign = -1 if toggle % 2 == 1 else +1
-        offset_scale = (toggle + 1) // 2
-        x_offset = sign * (X_STEP * offset_scale)
+        x_offset = X_OFFSETS[group_idx % len(X_OFFSETS)]
 
         # y 레벨도 그룹 단위로 순환
         y_current = UP_Y_LEVELS[group_idx % len(UP_Y_LEVELS)]
@@ -216,11 +214,7 @@ def draw_route(up_df, down_df, ic_km=None):
 
         km_anchor = sum(kms) / len(kms)
 
-        toggle = group_idx + 1
-        sign = +1 if toggle % 2 == 1 else -1  # 아래쪽은 반대로 시작
-        offset_scale = (toggle + 1) // 2
-        x_offset = sign * (X_STEP * offset_scale)
-
+        x_offset = X_OFFSETS[group_idx % len(X_OFFSETS)]
         y_current = DOWN_Y_LEVELS[group_idx % len(DOWN_Y_LEVELS)]
 
         x_text = km_anchor + x_offset
@@ -335,6 +329,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
