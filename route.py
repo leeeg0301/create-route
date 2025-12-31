@@ -112,38 +112,40 @@ def draw_route(up_df, down_df, ic_km=None):
     prev_km = None
     group = []
 
-    def flush_group_down(group):
-        toggle = 1
-        sign = +1
+    def flush_group_up(group):
+        toggle = 1       # 1,2,3,4...
+        sign = -1        # 영암 방향은 왼쪽(-)부터 시작
 
         for _, row in group:
             km = row[KM_COL]
             label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
 
+            # y 지그재그
             if toggle % 2 == 1:
-                y_current = y_down + 0.40
+                y_current = y_up - 0.18   # 아래
             else:
-                y_current = y_down - 0.18
+                y_current = y_up + 0.40   # 위
 
+            # x 오프셋
             offset_scale = (toggle + 1) // 2
             x_offset = sign * (0.8 * offset_scale)
 
             toggle += 1
             sign *= -1
 
-            ax.scatter(km, y_down, marker="^", s=220, color="black")
+            ax.scatter(km, y_up, marker="v", s=220, color="black")
 
             ax.text(
                 km + x_offset,
                 y_current,
-                label,          # ✅ 번호만 출력
+                label,
                 rotation=90,
                 ha="center",
                 va="center",
-                fontsize=11
-        )
+                fontsize=11,
+            )
 
-    # 그룹핑
+    # 그룹핑(영암)
     for idx, row in up_df_sorted.iterrows():
         km = row[KM_COL]
         if prev_km is None:
@@ -171,16 +173,17 @@ def draw_route(up_df, down_df, ic_km=None):
 
     def flush_group_down(group):
         toggle = 1
-        sign = +1
+        sign = +1     # 순천 방향은 오른쪽(+)부터 시작
 
         for _, row in group:
             km = row[KM_COL]
             label = f"({int(row['번호'])})"   # ✅ 1페이지는 번호만
 
+            # y 지그재그
             if toggle % 2 == 1:
-                y_current = y_down + 0.40
+                y_current = y_down + 0.40   # 위
             else:
-                y_current = y_down - 0.18
+                y_current = y_down - 0.18   # 아래
 
             offset_scale = (toggle + 1) // 2
             x_offset = sign * (0.8 * offset_scale)
@@ -193,14 +196,14 @@ def draw_route(up_df, down_df, ic_km=None):
             ax.text(
                 km + x_offset,
                 y_current,
-                label,          # ✅ 번호만 출력
+                label,
                 rotation=90,
                 ha="center",
                 va="center",
-                fontsize=11
-        )
+                fontsize=11,
+            )
 
-    # 그룹핑
+    # 그룹핑(순천)
     for idx, row in down_df_sorted.iterrows():
         km = row[KM_COL]
         if prev_km is None:
@@ -218,15 +221,12 @@ def draw_route(up_df, down_df, ic_km=None):
 
     # ============================ 보성 IC ============================
     if ic_km is not None:
-        # 위쪽
         ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
         ax.text(ic_km, y_up + 0.32, f"보성IC ({ic_km}k)", ha="center", fontsize=12)
 
-        # 아래쪽
         ax.vlines(ic_km, y_down - 0.25, y_down, colors="black")
         ax.text(ic_km, y_down - 0.32, f"보성IC ({ic_km}k)", ha="center", va="top", fontsize=12)
 
-    # ============================
     ax.set_xlim(MIN_KM, MAX_KM)
     ax.set_ylim(-1.0, 2.0)
     ax.axis("off")
@@ -286,6 +286,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
