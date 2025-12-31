@@ -259,22 +259,31 @@ def draw_route(up_df, down_df, ic_km=None):
         flush_group_down(group, group_idx)
 
     # ============================ 보성 IC ============================
-    if ic_km is not None:
-        # 위쪽
-        ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
-        ax.text(ic_km, y_up + 0.32, f"보성IC ({ic_km}k)", ha="center", fontsize=12)
+    if base_km is not None and MIN_KM <= base_km <= MAX_KM:
+    # 두 노선 라인을 관통하는 세로 기준선
+    ax.vlines(
+        base_km,
+        y_down - 0.35,
+        y_up + 0.35,
+        colors="black",
+        linewidth=2,
+        zorder=10
+    )
 
-        # 아래쪽
-        ax.vlines(ic_km, y_down - 0.25, y_down, colors="black")
-        ax.text(ic_km, y_down - 0.32, f"보성IC ({ic_km}k)", ha="center", va="top", fontsize=12)
+    # 라벨(흰 박스로 덮어서 항상 읽히게)
+    ax.text(
+        base_km,
+        y_up + 0.48,
+        f"지사 기준 {base_km:.1f}k",
+        ha="center",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+        zorder=11,
+        bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="black", lw=1)
+    )
 
-    ax.set_xlim(MIN_KM, MAX_KM)
-    ax.set_ylim(-1.0, 2.0)
-    ax.axis("off")
-    fig.tight_layout()
-
-    return fig
-
+        fig_route = draw_route(df_up_sorted, df_down_sorted, ic_km, base_km)
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -329,6 +338,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
