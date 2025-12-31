@@ -86,37 +86,36 @@ def draw_route(up_df, down_df, ic_km=None):
     MIN_KM = 0
     MAX_KM = 106.8
 
-    # ===== 가독성 파라미터(여기만 만지면 튜닝 쉬움) =====
-    EDGE_MARGIN_KM = 1.5       # 끝단(0k/106.8k) 근처에서 라벨이 바깥으로 나가는 것 방지
-    X_OFFSET_STEP_KM = 0.6     # 그룹 내 라벨을 좌우로 벌리는 기본 간격(0.8이면 더 넓게 퍼짐)
-    GROUP_THRESHOLD_KM = 0.31  # 이정이 이 값보다 가까우면 같은 그룹으로 묶기
+    # ===== 튜닝 파라미터 =====
+    GROUP_THRESHOLD_KM = 0.31   # 가까운 km를 같은 그룹으로 묶는 기준
+    EDGE_MARGIN_KM = 1.5        # 끝단에서 라벨이 바깥으로 튀지 않게 하는 구간
 
-    # y 레벨(촘촘하게 4단 분산)
+    # "포인트(화면)" 단위 오프셋 패턴 (겹침 줄이기 핵심)
+    DX_SEQ = [-28, 28, -56, 56, -84, 84, -112, 112]
+    DY_SEQ_UP =   [-16, 20, -28, 32, -40, 44, -52, 56]   # 위 라인용
+    DY_SEQ_DOWN = [20, -16, 32, -28, 44, -40, 56, -52]   # 아래 라인용
+    # =======================
+
+    # 라인 위치
     y_up = 1.0
     y_down = 0.0
-    UP_Y_LEVELS   = [y_up - 0.12, y_up + 0.16, y_up - 0.24, y_up + 0.04]
-    DOWN_Y_LEVELS = [y_down + 0.16, y_down - 0.12, y_down + 0.28, y_down - 0.24]
-    # =====================================================
 
-    # 라인 + 라벨(원래처럼 유지)
+    # 라인 + 라벨(원래대로 유지)
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_up + 0.6, "영암 방향 (106.8k → 0k)", fontsize=14)
 
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
 
-    def clamp_x(x):
-        # 아주 살짝 안쪽으로 클램프(끝단에서 텍스트 완전 잘림 방지)
-        return min(max(x, MIN_KM + 0.2), MAX_KM - 0.2)
-
-    # -------- 영암 방향(위쪽) --------
+    # -------------------
+    # 영암 방향(위쪽)
+    # -------------------
+    up_df_sorted = up_df.sort_values(KM_COL, ascending=False).reset_index(drop=True)
     prev_km = None
     group = []
 
     def flush_group_up(group):
         toggle = 1
-        sign = -1  # 왼쪽부터 시작
-
         for _, row in group:
             km = row[KM_COL]
             if pd.isna(km):
@@ -124,40 +123,34 @@ def draw_route(up_df, down_df, ic_km=None):
 
             label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
 
-            # y: 4단 순환
-            y_current = UP_Y_LEVELS[(toggle - 1) % len(UP_Y_LEVELS)]
+            i = toggle - 1
+            dx = DX_SEQ[i % len(DX_SEQ)]
+            dy = DY_SEQ_UP[i % len(DY_SEQ_UP)]
 
-            # x: 좌우로 점점 퍼뜨리기
-            offset_scale = (toggle + 1) // 2
-            x_offset = sign * (X_OFFSET_STEP_KM * offset_scale)
-
-            toggle += 1
-            sign *= -1
-
-            x_text = km + x_offset
-
-            # 끝단에서는 무조건 "안쪽"으로만
+            # 끝단에서는 라벨이 항상 "안쪽"으로만 가도록 dx 강제
             if km < MIN_KM + EDGE_MARGIN_KM:
-                x_text = km + abs(x_offset)
+                dx = abs(dx)
             elif km > MAX_KM - EDGE_MARGIN_KM:
-                x_text = km - abs(x_offset)
-
-            x_text = clamp_x(x_text)
+                dx = -abs(dx)
 
             ax.scatter(km, y_up, marker="v", s=220, color="black")
-            ax.plot([km, x_text], [y_up, y_current], linewidth=0.7, color="black")  # leader line
 
-            ax.text(
-                x_text,
-                y_current,
+            ax.annotate(
                 label,
-                rotation=90,
+                xy=(km, y_up),
+                xytext=(dx, dy),
+                textcoords="offset points",
                 ha="center",
                 va="center",
+                rotation=90,
                 fontsize=11,
+                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
+                annotation_clip=False,
             )
 
-    for idx, row in up_df.iterrows():
+            toggle += 1
+
+    for idx, row in up_df_sorted.iterrows():
         km = row[KM_COL]
         if pd.isna(km):
             continue
@@ -175,14 +168,15 @@ def draw_route(up_df, down_df, ic_km=None):
     if group:
         flush_group_up(group)
 
-    # -------- 순천 방향(아래쪽) --------
+    # -------------------
+    # 순천 방향(아래쪽)
+    # -------------------
+    down_df_sorted = down_df.sort_values(KM_COL, ascending=True).reset_index(drop=True)
     prev_km = None
     group = []
 
     def flush_group_down(group):
         toggle = 1
-        sign = +1  # 오른쪽부터 시작
-
         for _, row in group:
             km = row[KM_COL]
             if pd.isna(km):
@@ -190,38 +184,33 @@ def draw_route(up_df, down_df, ic_km=None):
 
             label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
 
-            # y: 4단 순환
-            y_current = DOWN_Y_LEVELS[(toggle - 1) % len(DOWN_Y_LEVELS)]
-
-            offset_scale = (toggle + 1) // 2
-            x_offset = sign * (X_OFFSET_STEP_KM * offset_scale)
-
-            toggle += 1
-            sign *= -1
-
-            x_text = km + x_offset
+            i = toggle - 1
+            dx = DX_SEQ[i % len(DX_SEQ)]
+            dy = DY_SEQ_DOWN[i % len(DY_SEQ_DOWN)]
 
             if km < MIN_KM + EDGE_MARGIN_KM:
-                x_text = km + abs(x_offset)
+                dx = abs(dx)
             elif km > MAX_KM - EDGE_MARGIN_KM:
-                x_text = km - abs(x_offset)
-
-            x_text = clamp_x(x_text)
+                dx = -abs(dx)
 
             ax.scatter(km, y_down, marker="^", s=220, color="black")
-            ax.plot([km, x_text], [y_down, y_current], linewidth=0.7, color="black")  # leader line
 
-            ax.text(
-                x_text,
-                y_current,
+            ax.annotate(
                 label,
-                rotation=90,
+                xy=(km, y_down),
+                xytext=(dx, dy),
+                textcoords="offset points",
                 ha="center",
                 va="center",
+                rotation=90,
                 fontsize=11,
+                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
+                annotation_clip=False,
             )
 
-    for idx, row in down_df.iterrows():
+            toggle += 1
+
+    for idx, row in down_df_sorted.iterrows():
         km = row[KM_COL]
         if pd.isna(km):
             continue
@@ -239,7 +228,9 @@ def draw_route(up_df, down_df, ic_km=None):
     if group:
         flush_group_down(group)
 
-    # -------- 보성 IC(기존 유지: 선 + 텍스트) --------
+    # -------------------
+    # IC 표시(원래대로)
+    # -------------------
     if ic_km is not None:
         ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
         ax.text(ic_km, y_up + 0.32, f"보성IC ({ic_km}k)", ha="center", fontsize=12)
@@ -252,7 +243,6 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.axis("off")
     fig.tight_layout()
     return fig
-
 
 # ---------------------------
 # 2페이지: 교량 목록(이름 표시 유지)
@@ -305,6 +295,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
 
 
