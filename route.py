@@ -7,13 +7,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 from io import BytesIO
 
 # ======================================================
-# 1. 한글 폰트 설정 (fonts/NanumGothic.ttf 있으면 적용)
+# 1. 한글 폰트 설정 (fonts/NanumGothic-Regular.ttf 있으면 적용)
 # ======================================================
 font_path = "fonts/NanumGothic-Regular.ttf"
 if os.path.exists(font_path):
     fm.fontManager.addfont(font_path)
     plt.rcParams["font.family"] = "NanumGothic"
-
 
 # ======================================================
 # 2. CSV 불러오기
@@ -28,25 +27,27 @@ NAME_COL = "name"
 KM_COL = "이정(km)"
 TYPE_COL = "종별구분"
 
+# ✅ 이정(km) 숫자 변환(그룹핑/정렬 안정화)
+df[KM_COL] = pd.to_numeric(df[KM_COL], errors="coerce")
+
 # 괄호 안의 방향 제거하여 표시용 이름 생성
 df["표시이름"] = (
     df[NAME_COL]
+    .astype(str)
     .str.replace(r"\(영암\)", "", regex=True)
     .str.replace(r"\(순천\)", "", regex=True)
     .str.strip()
 )
 
-
 # ======================================================
 # 3. 방향 분류
 # ======================================================
-has_yeongam = df[NAME_COL].str.contains("영암", na=False)
-has_suncheon = df[NAME_COL].str.contains("순천", na=False)
+has_yeongam = df[NAME_COL].astype(str).str.contains("영암", na=False)
+has_suncheon = df[NAME_COL].astype(str).str.contains("순천", na=False)
 neutral = ~(has_yeongam | has_suncheon)
 
-yeongam_options = df[has_yeongam | neutral][NAME_COL].unique().tolist()
-suncheon_options = df[has_suncheon | neutral][NAME_COL].unique().tolist()
-
+yeongam_options = df[has_yeongam | neutral][NAME_COL].dropna().unique().tolist()
+suncheon_options = df[has_suncheon | neutral][NAME_COL].dropna().unique().tolist()
 
 # ======================================================
 # 4. Streamlit UI
@@ -64,7 +65,6 @@ selected_suncheon = st.sidebar.multiselect(
 )
 
 st.sidebar.write("※ 선택하지 않으면 해당 방향 전체 자동 표시됩니다.")
-
 
 # ======================================================
 # 5. 선택된 교량 데이터 정리 + 번호 매기기
@@ -85,16 +85,14 @@ df_down_sorted = df_down.sort_values(KM_COL, ascending=True).reset_index(drop=Tr
 df_down_sorted["번호"] = df_down_sorted.index + 1
 df_down_sorted["표시번호"] = df_down_sorted["번호"].apply(lambda x: f"({x})")
 
-
 # ======================================================
 # 6. IC 자동 감지
 # ======================================================
-ic_rows = df[df[TYPE_COL].str.contains("IC", na=False)]
-ic_km = float(ic_rows.iloc[0][KM_COL]) if not ic_rows.empty else None
-
+ic_rows = df[df[TYPE_COL].astype(str).str.contains("IC", na=False)]
+ic_km = float(ic_rows.iloc[0][KM_COL]) if (not ic_rows.empty and pd.notna(ic_rows.iloc[0][KM_COL])) else None
 
 # ======================================================
-# 7. 노선도 그리기 (겹침방지 포함)
+# 7. 노선도 그리기 (겹침방지 + 가까운 교량 라벨 묶음)
 # ======================================================
 def draw_route(up_df, down_df, ic_km=None):
     fig, ax = plt.subplots(figsize=(22, 10))
@@ -102,70 +100,79 @@ def draw_route(up_df, down_df, ic_km=None):
     MIN_KM = 0
     MAX_KM = 106.8
 
-    # ===== 튜닝 파라미터 =====
-    GROUP_THRESHOLD_KM = 0.31   # 가까운 km를 같은 그룹으로 묶는 기준
-    EDGE_MARGIN_KM = 1.5        # 끝단에서 라벨이 바깥으로 튀지 않게 하는 구간
+    # ---- 튜닝 값(너가 필요하면 여기만 바꾸면 됨) ----
+    GROUP_THRESHOLD_KM = 0.03   # ✅ 0.01k 수준이면 0.03~0.05 추천 (원하면 0.31로 크게도 가능)
+    EDGE_MARGIN_KM = 1.5        # 끝단(0k/106.8k)에서 바깥으로 나가는 걸 막기
+    X_STEP = 0.55               # 라벨을 좌/우로 퍼뜨리는 정도(km 단위)
+    UP_Y_LEVELS   = [1.0 - 0.10, 1.0 + 0.12, 1.0 - 0.20, 1.0 + 0.04, 1.0 - 0.28, 1.0 + 0.20]
+    DOWN_Y_LEVELS = [0.0 + 0.12, 0.0 - 0.10, 0.0 + 0.20, 0.0 - 0.18, 0.0 + 0.28, 0.0 - 0.26]
+    # -----------------------------------------------
 
-    # "포인트(화면)" 단위 오프셋 패턴 (겹침 줄이기 핵심)
-    DX_SEQ = [-28, 28, -56, 56, -84, 84, -112, 112]
-    DY_SEQ_UP =   [-16, 20, -28, 32, -40, 44, -52, 56]   # 위 라인용
-    DY_SEQ_DOWN = [20, -16, 32, -28, 44, -40, 56, -52]   # 아래 라인용
-    # =======================
+    def clamp_x(x):
+        return min(max(x, MIN_KM + 0.05), MAX_KM - 0.05)
 
-    # 라인 위치
+    # ============================ 영암 방향 ============================
     y_up = 1.0
-    y_down = 0.0
-
-    # 라인 + 라벨(원래대로 유지)
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_up + 0.6, "영암 방향 (106.8k → 0k)", fontsize=14)
 
-    ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
-    ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
-
-    # -------------------
-    # 영암 방향(위쪽)
-    # -------------------
     up_df_sorted = up_df.sort_values(KM_COL, ascending=False).reset_index(drop=True)
+
     prev_km = None
     group = []
 
-    def flush_group_up(group):
-        toggle = 1
-        for _, row in group:
-            km = row[KM_COL]
-            if pd.isna(km):
-                continue
+    # ✅ 그룹 라벨 “한 번만” 찍기
+    def flush_group_up(group, group_idx):
+        # group: [(idx, row), ...]
+        kms = [float(r[KM_COL]) for _, r in group if pd.notna(r[KM_COL])]
+        if not kms:
+            return
 
-            label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
-
-            i = toggle - 1
-            dx = DX_SEQ[i % len(DX_SEQ)]
-            dy = DY_SEQ_UP[i % len(DY_SEQ_UP)]
-
-            # 끝단에서는 라벨이 항상 "안쪽"으로만 가도록 dx 강제
-            if km < MIN_KM + EDGE_MARGIN_KM:
-                dx = abs(dx)
-            elif km > MAX_KM - EDGE_MARGIN_KM:
-                dx = -abs(dx)
-
+        # 마커는 각 교량 위치에 그대로
+        for km in kms:
             ax.scatter(km, y_up, marker="v", s=220, color="black")
 
-            ax.annotate(
-                label,
-                xy=(km, y_up),
-                xytext=(dx, dy),
-                textcoords="offset points",
-                ha="center",
-                va="center",
-                rotation=90,
-                fontsize=11,
-                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
-                annotation_clip=False,
-            )
+        nums = [int(r["번호"]) for _, r in group]
+        n1, n2 = min(nums), max(nums)
 
-            toggle += 1
+        # ✅ 1페이지: 번호만(묶음이면 범위로)
+        label = f"({n1}~{n2})" if n1 != n2 else f"({n1})"
 
+        km_anchor = sum(kms) / len(kms)
+
+        # 라벨 배치(그룹 단위로 좌/우 번갈아)
+        toggle = group_idx + 1
+        sign = -1 if toggle % 2 == 1 else +1
+        offset_scale = (toggle + 1) // 2
+        x_offset = sign * (X_STEP * offset_scale)
+
+        # y 레벨도 그룹 단위로 순환
+        y_current = UP_Y_LEVELS[group_idx % len(UP_Y_LEVELS)]
+
+        x_text = km_anchor + x_offset
+
+        # 끝단이면 안쪽으로만
+        if km_anchor < MIN_KM + EDGE_MARGIN_KM:
+            x_text = km_anchor + abs(x_offset)
+        elif km_anchor > MAX_KM - EDGE_MARGIN_KM:
+            x_text = km_anchor - abs(x_offset)
+
+        x_text = clamp_x(x_text)
+
+        # leader line + 라벨
+        ax.plot([km_anchor, x_text], [y_up, y_current], linewidth=0.7, color="black")
+        ax.text(
+            x_text,
+            y_current,
+            label,
+            rotation=90,
+            ha="center",
+            va="center",
+            fontsize=11,
+        )
+
+    # 그룹핑(영암)
+    group_idx = 0
     for idx, row in up_df_sorted.iterrows():
         km = row[KM_COL]
         if pd.isna(km):
@@ -174,58 +181,70 @@ def draw_route(up_df, down_df, ic_km=None):
         if prev_km is None:
             group = [(idx, row)]
         else:
-            if abs(prev_km - km) < GROUP_THRESHOLD_KM:
+            if abs(prev_km - km) <= GROUP_THRESHOLD_KM:
                 group.append((idx, row))
             else:
-                flush_group_up(group)
+                flush_group_up(group, group_idx)
+                group_idx += 1
                 group = [(idx, row)]
         prev_km = km
 
     if group:
-        flush_group_up(group)
+        flush_group_up(group, group_idx)
 
-    # -------------------
-    # 순천 방향(아래쪽)
-    # -------------------
+    # ============================ 순천 방향 ============================
+    y_down = 0.0
+    ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
+    ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
+
     down_df_sorted = down_df.sort_values(KM_COL, ascending=True).reset_index(drop=True)
+
     prev_km = None
     group = []
 
-    def flush_group_down(group):
-        toggle = 1
-        for _, row in group:
-            km = row[KM_COL]
-            if pd.isna(km):
-                continue
+    def flush_group_down(group, group_idx):
+        kms = [float(r[KM_COL]) for _, r in group if pd.notna(r[KM_COL])]
+        if not kms:
+            return
 
-            label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
-
-            i = toggle - 1
-            dx = DX_SEQ[i % len(DX_SEQ)]
-            dy = DY_SEQ_DOWN[i % len(DY_SEQ_DOWN)]
-
-            if km < MIN_KM + EDGE_MARGIN_KM:
-                dx = abs(dx)
-            elif km > MAX_KM - EDGE_MARGIN_KM:
-                dx = -abs(dx)
-
+        for km in kms:
             ax.scatter(km, y_down, marker="^", s=220, color="black")
 
-            ax.annotate(
-                label,
-                xy=(km, y_down),
-                xytext=(dx, dy),
-                textcoords="offset points",
-                ha="center",
-                va="center",
-                rotation=90,
-                fontsize=11,
-                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
-                annotation_clip=False,
-            )
+        nums = [int(r["번호"]) for _, r in group]
+        n1, n2 = min(nums), max(nums)
+        label = f"({n1}~{n2})" if n1 != n2 else f"({n1})"
 
-            toggle += 1
+        km_anchor = sum(kms) / len(kms)
 
+        toggle = group_idx + 1
+        sign = +1 if toggle % 2 == 1 else -1  # 아래쪽은 반대로 시작
+        offset_scale = (toggle + 1) // 2
+        x_offset = sign * (X_STEP * offset_scale)
+
+        y_current = DOWN_Y_LEVELS[group_idx % len(DOWN_Y_LEVELS)]
+
+        x_text = km_anchor + x_offset
+
+        if km_anchor < MIN_KM + EDGE_MARGIN_KM:
+            x_text = km_anchor + abs(x_offset)
+        elif km_anchor > MAX_KM - EDGE_MARGIN_KM:
+            x_text = km_anchor - abs(x_offset)
+
+        x_text = clamp_x(x_text)
+
+        ax.plot([km_anchor, x_text], [y_down, y_current], linewidth=0.7, color="black")
+        ax.text(
+            x_text,
+            y_current,
+            label,
+            rotation=90,
+            ha="center",
+            va="center",
+            fontsize=11,
+        )
+
+    # 그룹핑(순천)
+    group_idx = 0
     for idx, row in down_df_sorted.iterrows():
         km = row[KM_COL]
         if pd.isna(km):
@@ -234,23 +253,24 @@ def draw_route(up_df, down_df, ic_km=None):
         if prev_km is None:
             group = [(idx, row)]
         else:
-            if abs(prev_km - km) < GROUP_THRESHOLD_KM:
+            if abs(prev_km - km) <= GROUP_THRESHOLD_KM:
                 group.append((idx, row))
             else:
-                flush_group_down(group)
+                flush_group_down(group, group_idx)
+                group_idx += 1
                 group = [(idx, row)]
         prev_km = km
 
     if group:
-        flush_group_down(group)
+        flush_group_down(group, group_idx)
 
-    # -------------------
-    # IC 표시(원래대로)
-    # -------------------
+    # ============================ 보성 IC ============================
     if ic_km is not None:
+        # 위쪽
         ax.vlines(ic_km, y_up, y_up + 0.25, colors="black")
         ax.text(ic_km, y_up + 0.32, f"보성IC ({ic_km}k)", ha="center", fontsize=12)
 
+        # 아래쪽
         ax.vlines(ic_km, y_down - 0.25, y_down, colors="black")
         ax.text(ic_km, y_down - 0.32, f"보성IC ({ic_km}k)", ha="center", va="top", fontsize=12)
 
@@ -258,7 +278,9 @@ def draw_route(up_df, down_df, ic_km=None):
     ax.set_ylim(-1.0, 2.0)
     ax.axis("off")
     fig.tight_layout()
+
     return fig
+
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -271,15 +293,17 @@ def draw_list_page(up_df, down_df):
 
     # 영암
     up_list = [
-        f"{row['번호']}. {row['표시이름']} — {row[KM_COL]}k"
+        f"{int(row['번호'])}. {row['표시이름']} — {row[KM_COL]}k"
         for _, row in up_df.iterrows()
+        if pd.notna(row[KM_COL])
     ]
     up_text = "\n".join(up_list) if up_list else "선택된 교량 없음"
 
     # 순천
     down_list = [
-        f"{row['번호']}. {row['표시이름']} — {row[KM_COL]}k"
+        f"{int(row['번호'])}. {row['표시이름']} — {row[KM_COL]}k"
         for _, row in down_df.iterrows()
+        if pd.notna(row[KM_COL])
     ]
     down_text = "\n".join(down_list) if down_list else "선택된 교량 없음"
 
@@ -288,7 +312,6 @@ def draw_list_page(up_df, down_df):
 
     fig.tight_layout()
     return fig
-
 
 # ======================================================
 # 9. PDF 생성 버튼
@@ -312,15 +335,6 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
-
-
-
-
-
-
-
-
-
 
 
 
