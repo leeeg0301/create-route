@@ -114,59 +114,39 @@ def draw_route(up_df, down_df, ic_km=None):
     prev_km = None
     group = []
 
-    def flush_group_up(group):
-        toggle = 1
-        for _, row in group:
-            km = row[KM_COL]
-            if pd.isna(km):
-                continue
+def flush_group_up(group):
+    BASE = 0.10   # 선에서 라벨 시작 높이
+    STEP = 0.08   # 라벨 층 간격(작을수록 촘촘)
 
-            label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
-
-            i = toggle - 1
-            dx = DX_SEQ[i % len(DX_SEQ)]
-            dy = DY_SEQ_UP[i % len(DY_SEQ_UP)]
-
-            # 끝단에서는 라벨이 항상 "안쪽"으로만 가도록 dx 강제
-            if km < MIN_KM + EDGE_MARGIN_KM:
-                dx = abs(dx)
-            elif km > MAX_KM - EDGE_MARGIN_KM:
-                dx = -abs(dx)
-
-            ax.scatter(km, y_up, marker="v", s=220, color="black")
-
-            ax.annotate(
-                label,
-                xy=(km, y_up),
-                xytext=(dx, dy),
-                textcoords="offset points",
-                ha="center",
-                va="center",
-                rotation=90,
-                fontsize=11,
-                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
-                annotation_clip=False,
-            )
-
-            toggle += 1
-
-    for idx, row in up_df_sorted.iterrows():
+    for i, (_, row) in enumerate(group):
         km = row[KM_COL]
         if pd.isna(km):
             continue
 
-        if prev_km is None:
-            group = [(idx, row)]
-        else:
-            if abs(prev_km - km) < GROUP_THRESHOLD_KM:
-                group.append((idx, row))
-            else:
-                flush_group_up(group)
-                group = [(idx, row)]
-        prev_km = km
+        label = f"({int(row['번호'])})"   # 번호만
 
-    if group:
-        flush_group_up(group)
+        # ✅ x는 절대 안 밀기 (대각선 교차 원인 제거)
+        x_text = km
+
+        # ✅ 같은 그룹 안에서는 위로만 층층이
+        y_current = y_up + BASE + STEP * i
+
+        ax.scatter(km, y_up, marker="v", s=220, color="black", zorder=3)
+
+        # ✅ 연결선은 수직 (교차 거의 없음)
+        ax.vlines(km, y_up, y_current, colors="black", linewidth=0.7, zorder=2)
+
+        ax.text(
+            x_text,
+            y_current,
+            label,
+            rotation=90,
+            ha="center",
+            va="center",
+            fontsize=11,
+            zorder=4,
+            bbox=dict(facecolor="white", edgecolor="none", pad=0.2, alpha=0.8),
+        )
 
     # -------------------
     # 순천 방향(아래쪽)
@@ -175,58 +155,36 @@ def draw_route(up_df, down_df, ic_km=None):
     prev_km = None
     group = []
 
-    def flush_group_down(group):
-        toggle = 1
-        for _, row in group:
-            km = row[KM_COL]
-            if pd.isna(km):
-                continue
+def flush_group_down(group):
+    BASE = 0.10
+    STEP = 0.08
 
-            label = f"({int(row['번호'])})"  # ✅ 1페이지는 번호만
-
-            i = toggle - 1
-            dx = DX_SEQ[i % len(DX_SEQ)]
-            dy = DY_SEQ_DOWN[i % len(DY_SEQ_DOWN)]
-
-            if km < MIN_KM + EDGE_MARGIN_KM:
-                dx = abs(dx)
-            elif km > MAX_KM - EDGE_MARGIN_KM:
-                dx = -abs(dx)
-
-            ax.scatter(km, y_down, marker="^", s=220, color="black")
-
-            ax.annotate(
-                label,
-                xy=(km, y_down),
-                xytext=(dx, dy),
-                textcoords="offset points",
-                ha="center",
-                va="center",
-                rotation=90,
-                fontsize=11,
-                arrowprops=dict(arrowstyle="-", lw=0.7, color="black"),
-                annotation_clip=False,
-            )
-
-            toggle += 1
-
-    for idx, row in down_df_sorted.iterrows():
+    for i, (_, row) in enumerate(group):
         km = row[KM_COL]
         if pd.isna(km):
             continue
 
-        if prev_km is None:
-            group = [(idx, row)]
-        else:
-            if abs(prev_km - km) < GROUP_THRESHOLD_KM:
-                group.append((idx, row))
-            else:
-                flush_group_down(group)
-                group = [(idx, row)]
-        prev_km = km
+        label = f"({int(row['번호'])})"
 
-    if group:
-        flush_group_down(group)
+        x_text = km
+        y_current = y_down - BASE - STEP * i   # ✅ 아래로만 층층이
+
+        ax.scatter(km, y_down, marker="^", s=220, color="black", zorder=3)
+
+        ax.vlines(km, y_current, y_down, colors="black", linewidth=0.7, zorder=2)
+
+        ax.text(
+            x_text,
+            y_current,
+            label,
+            rotation=90,
+            ha="center",
+            va="center",
+            fontsize=11,
+            zorder=4,
+            bbox=dict(facecolor="white", edgecolor="none", pad=0.2, alpha=0.8),
+        )
+
 
     # -------------------
     # IC 표시(원래대로)
@@ -296,6 +254,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
 
 
