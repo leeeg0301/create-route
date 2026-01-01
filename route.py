@@ -112,6 +112,12 @@ def draw_route(up_df, down_df, ic_km=None):
     def clamp_x(x):
         return min(max(x, MIN_KM + 0.05), MAX_KM - 0.05)
 
+    ax.set_xlim(MIN_KM, MAX_KM)
+    ax.set_ylim(-1.0, 2.0)
+    ax.axis("off")
+    fig.tight_layout()
+    return fig
+
     # ============================ 영암 방향 ============================
     y_up = 1.0
     ax.hlines(y_up, MIN_KM, MAX_KM, colors="black", linewidth=2)
@@ -258,9 +264,8 @@ def draw_route(up_df, down_df, ic_km=None):
     if group:
         flush_group_down(group, group_idx)
 
-    # ============================ 보성 IC ============================
-    if base_km is not None and MIN_KM <= base_km <= MAX_KM:
-    # 두 노선 라인을 관통하는 세로 기준선
+# ============================ 지사 기준점 ============================
+if base_km is not None and MIN_KM <= base_km <= MAX_KM:
     ax.vlines(
         base_km,
         y_down - 0.35,
@@ -270,7 +275,6 @@ def draw_route(up_df, down_df, ic_km=None):
         zorder=10
     )
 
-    # 라벨(흰 박스로 덮어서 항상 읽히게)
     ax.text(
         base_km,
         y_up + 0.48,
@@ -282,8 +286,6 @@ def draw_route(up_df, down_df, ic_km=None):
         zorder=11,
         bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="black", lw=1)
     )
-
-        fig_route = draw_route(df_up_sorted, df_down_sorted, ic_km, base_km)
 # ======================================================
 # 8. 2페이지: 교량 목록
 # ======================================================
@@ -320,7 +322,6 @@ def draw_list_page(up_df, down_df):
 # 9. PDF 생성 버튼
 # ======================================================
 if st.button("노선도 생성 및 PDF 다운로드"):
-    fig_route = draw_route(df_up_sorted, df_down_sorted, ic_km)
     fig_list = draw_list_page(df_up_sorted, df_down_sorted)
 
     st.subheader("노선도 미리보기")
@@ -338,6 +339,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf"
     )
+
 
 
 
