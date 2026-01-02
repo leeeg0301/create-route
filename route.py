@@ -1,7 +1,7 @@
 # route.py
-# - 1페이지(노선도): 번호만 표시 (가까운 교량은 (1~3)처럼 "묶음 라벨" 1개로 표시)
-# - 2페이지(목록): 교량명/노선명 그대로 표시
-# - 지사 기준점(base_km): 이정/정렬/그룹핑에 영향 없이 "오버레이"로만 표시
+# - 1페이지(노선도): 번호만 표시 (가까운 교량은 (1~3)처럼 묶음 라벨)
+# - 2페이지(목록): 교량명 그대로 표시
+# - 지사 기준점/주요 지점 표시는 "항상 고정"으로 hline 위에 표시(이정 로직 영향 없음)
 
 import os
 from io import BytesIO
@@ -71,11 +71,20 @@ selected_suncheon = st.sidebar.multiselect("순천 방향 표시할 교량", sun
 
 st.sidebar.divider()
 
-# ✅ 지사 기준점(이정에 영향 X: 표시만)
-base_km = st.sidebar.number_input("지사 기준 km", value=61.0, step=0.1)
-
 # ✅ 가까운 교량 묶는 기준(0.01k대면 0.03~0.05 추천)
 group_threshold_km = st.sidebar.number_input("가까운 교량 묶음 기준(km)", value=0.03, step=0.01)
+
+# ✅ 지사 기준/주요 지점은 "항상 고정 표시"
+FIXED_POINTS = [
+    ("서영암", 0.38),
+    ("학산", 5.34),
+    ("강진", 19.53),
+    ("장흥", 38.26),
+    ("지사 기준", 61.00),
+    ("벌교", 79.71),
+    ("고흥", 83.91),
+    ("순천만", 100.27),
+]
 
 
 # ======================================================
@@ -107,9 +116,9 @@ ic_km = float(ic_rows.iloc[0][KM_COL]) if (not ic_rows.empty and pd.notna(ic_row
 # 7) 노선도(1페이지)
 #    - 그룹당 라벨 1개: (n1~n2) 또는 (n)
 #    - 라벨은 패턴 오프셋(무한 증가 X) + leader line
-#    - 지사 기준점(base_km)은 오버레이로만 표시
+#    - 지사 기준/주요 지점은 hline 위에 고정 표시(+0.4)
 # ======================================================
-def draw_route(up_df, down_df, ic_km=None, base_km=None, group_threshold_km=0.03):
+def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points=None):
     fig, ax = plt.subplots(figsize=(22, 10))
 
     MIN_KM = 0.0
@@ -137,27 +146,31 @@ def draw_route(up_df, down_df, ic_km=None, base_km=None, group_threshold_km=0.03
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
 
-    # ---------------- 지사 기준점(오버레이만) ----------------
-    if base_km is not None and MIN_KM <= float(base_km) <= MAX_KM:
-        bk = float(base_km)
-        ax.vlines(
-            bk,
-            y_down - 0.35,
-            y_up + 0.35,
-            colors="black",
-            linewidth=2,
-            zorder=10
-        )
+    # ---------------- 고정 지점 표시(hline 위 +0.4) ----------------
+    if fixed_points is None:
+        fixed_points = []
+
+    TICK_H = 0.10
+    TEXT_DY = 0.40  # ✅ 요청대로 0.4 올림
+
+    for name, km in fixed_points:
+        if km < MIN_KM or km > MAX_KM:
+            continue
+
+        # 위/아래 라인 눈금
+        ax.vlines(km, y_up, y_up + TICK_H, colors="black", linewidth=1.2, zorder=9)
+        ax.vlines(km, y_down, y_down - TICK_H, colors="black", linewidth=1.2, zorder=9)
+
+        # 라벨(위쪽 라인 기준으로 표시)
         ax.text(
-            bk,
-            y_up + 0.48,
-            f"지사 기준 {bk:.1f}k",
+            km,
+            y_up + TEXT_DY,
+            f"{name} {km:.2f}k",
             ha="center",
             va="bottom",
-            fontsize=13,
-            fontweight="bold",
-            zorder=11,
-            bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="black", lw=1)
+            fontsize=11,
+            zorder=10,
+            bbox=dict(boxstyle="round,pad=0.20", fc="white", ec="black", lw=1),
         )
 
     # ---------------- 그룹핑 유틸 ----------------
@@ -203,7 +216,6 @@ def draw_route(up_df, down_df, ic_km=None, base_km=None, group_threshold_km=0.03
         x_offset = X_OFFSETS[g_idx % len(X_OFFSETS)]
         y_text = UP_Y_LEVELS[g_idx % len(UP_Y_LEVELS)]
 
-        # 끝단이면 안쪽으로만 보내기
         if km_anchor < MIN_KM + EDGE_MARGIN_KM:
             x_text = km_anchor + abs(x_offset)
         elif km_anchor > MAX_KM - EDGE_MARGIN_KM:
@@ -267,25 +279,27 @@ def draw_route(up_df, down_df, ic_km=None, base_km=None, group_threshold_km=0.03
     # ---------------- (선택) IC 표시(기존 유지용) ----------------
     if ic_km is not None and MIN_KM <= float(ic_km) <= MAX_KM:
         ik = float(ic_km)
-        ax.vlines(ik, y_up, y_up + 0.25, colors="black")
+        ax.vlines(ik, y_up, y_up + 0.25, colors="black", zorder=8)
         ax.text(
             ik,
             y_up + 0.32,
-            f"IC ({ik:.1f}k)",
+            f"IC ({ik:.2f}k)",
             ha="center",
             fontsize=12,
-            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=1)
+            zorder=9,
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=1),
         )
 
-        ax.vlines(ik, y_down - 0.25, y_down, colors="black")
+        ax.vlines(ik, y_down - 0.25, y_down, colors="black", zorder=8)
         ax.text(
             ik,
             y_down - 0.32,
-            f"IC ({ik:.1f}k)",
+            f"IC ({ik:.2f}k)",
             ha="center",
             va="top",
             fontsize=12,
-            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=1)
+            zorder=9,
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=1),
         )
 
     ax.set_xlim(MIN_KM, MAX_KM)
@@ -327,7 +341,13 @@ def draw_list_page(up_df, down_df):
 # 9) PDF 생성/다운로드
 # ======================================================
 if st.button("노선도 생성 및 PDF 다운로드"):
-    fig_route = draw_route(df_up_sorted, df_down_sorted, ic_km, base_km, group_threshold_km)
+    fig_route = draw_route(
+        df_up_sorted,
+        df_down_sorted,
+        ic_km=ic_km,
+        group_threshold_km=group_threshold_km,
+        fixed_points=FIXED_POINTS,
+    )
     fig_list = draw_list_page(df_up_sorted, df_down_sorted)
 
     st.subheader("노선도 미리보기(1페이지)")
@@ -345,9 +365,6 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
-
-
-
 
 
 
