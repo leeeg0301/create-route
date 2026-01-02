@@ -77,13 +77,13 @@ group_threshold_km = st.sidebar.number_input("가까운 교량 묶음 기준(km)
 # ✅ 지사 기준/주요 지점은 "항상 고정 표시"
 FIXED_POINTS = [
     ("서영암", 0.38),
-    ("학산", 5.34),
-    ("강진", 19.53),
-    ("장흥", 38.26),
+    ("학산", 5.3),
+    ("강진", 19.5),
+    ("장흥", 38.2),
     ("지사 기준", 61.00),
-    ("벌교", 79.71),
-    ("고흥", 83.91),
-    ("순천만", 100.27),
+    ("벌교", 79.7),
+    ("고흥", 83.9),
+    ("순천만", 100.2),
 ]
 
 
@@ -288,7 +288,7 @@ def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points
         ax.text(
             ik,
             y_up + 0.32,
-            f"IC ({ik:.2f}k)",
+            f"IC ({ik:.2f})",
             ha="center",
             fontsize=12,
             zorder=9,
@@ -299,7 +299,7 @@ def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points
         ax.text(
             ik,
             y_down - 0.32,
-            f"IC ({ik:.2f}k)",
+            f"IC ({ik:.2f})",
             ha="center",
             va="top",
             fontsize=12,
@@ -370,6 +370,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
 
 
