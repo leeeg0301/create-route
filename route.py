@@ -146,22 +146,28 @@ def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points
     ax.hlines(y_down, MIN_KM, MAX_KM, colors="black", linewidth=2)
     ax.text(MIN_KM, y_down + 0.6, "순천 방향 (0k → 106.8k)", fontsize=14)
 
-    # ---------------- 고정 지점 표시(hline 위 +0.4) ----------------
+    # ---------------- 고정 지점 표시(세로선: 위~아래 관통 + 라벨은 위로 0.4) ----------------
     if fixed_points is None:
         fixed_points = []
 
-    TICK_H = 0.10
-    TEXT_DY = 0.40  # ✅ 요청대로 0.4 올림
+    TEXT_DY = 0.40  # 라벨 위치를 0.4 올림
 
     for name, km in fixed_points:
         if km < MIN_KM or km > MAX_KM:
             continue
 
-        # 위/아래 라인 눈금
-        ax.vlines(km, y_up, y_up + TICK_H, colors="black", linewidth=1.2, zorder=9)
-        ax.vlines(km, y_down, y_down - TICK_H, colors="black", linewidth=1.2, zorder=9)
+        # ✅ 전부 "관통 세로선"으로
+        lw = 2.2 if name == "지사 기준" else 1.2  # 지사 기준만 조금 굵게(원하면 삭제 가능)
+        ax.vlines(
+            km,
+            y_down - 0.35,
+            y_up + 0.35,
+            colors="black",
+            linewidth=lw,
+            zorder=9
+        )
 
-        # 라벨(위쪽 라인 기준으로 표시)
+        # 라벨은 위쪽 라인 기준으로 +0.4
         ax.text(
             km,
             y_up + TEXT_DY,
@@ -172,7 +178,6 @@ def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points
             zorder=10,
             bbox=dict(boxstyle="round,pad=0.20", fc="white", ec="black", lw=1),
         )
-
     # ---------------- 그룹핑 유틸 ----------------
     def iter_groups(sorted_df, threshold_km):
         prev_km = None
@@ -365,6 +370,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
 
 
