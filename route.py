@@ -171,7 +171,7 @@ def draw_route(up_df, down_df, ic_km=None, group_threshold_km=0.03, fixed_points
         ax.text(
             km,
             y_up + TEXT_DY,
-            f"{name} {km:.2f}k",
+            f"{name} {km:.1f}",
             ha="center",
             va="bottom",
             fontsize=11,
@@ -370,6 +370,7 @@ if st.button("노선도 생성 및 PDF 다운로드"):
         file_name="노선도_및_교량목록.pdf",
         mime="application/pdf",
     )
+
 
 
 
